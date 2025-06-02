@@ -1,35 +1,55 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+// src/App.jsx
+import { useState, useEffect } from 'react';
+import { supabase } from './supabaseClient'; // Certifique-se que o caminho está correto
+import Auth from './components/Auth';
+// Vamos criar um Dashboard simples depois
+// import Dashboard from './components/Dashboard'; // Descomente quando tiver o Dashboard
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setLoading(false);
+    };
+    getSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+
+    return () => {
+      authListener?.unsubscribe();
+    };
+  }, []);
+
+  if (loading) {
+    return <div>Loading authentication status...</div>;
+  }
+
+  if (!session) {
+    return <Auth />;
+  } else {
+    return (
+      <div style={{ padding: '20px' }}>
+        <h2>Welcome to DocBiz, {session.user.email}!</h2>
+        <p>Your User ID: {session.user.id}</p>
+        {/* Aqui virá o Dashboard com extração e contratos */}
+        {/* Exemplo: <Dashboard session={session} /> */}
+        <button
+          onClick={() => supabase.auth.signOut()}
+          style={{ marginTop: '20px', padding: '10px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px' }}
+        >
+          Sign Out
         </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    );
+  }
 }
 
-export default App
+export default App;
